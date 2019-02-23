@@ -1,4 +1,6 @@
 import {Directive, ElementRef, HostListener, Input, OnInit, Renderer2} from '@angular/core';
+
+import * as eq from 'css-element-queries';
 import * as Hammer from 'hammerjs';
 
 @Directive({
@@ -13,6 +15,8 @@ export class ScrollableDirective implements OnInit {
   @Input() barSeparation = 0;
   @Input() barRadius: 'default' | 'none' | number = 'default';
 
+  @Input() detectSizeChanges: HTMLElement = null;
+
   private visibleHeight: number;
   private innerHeight: number;
 
@@ -22,6 +26,7 @@ export class ScrollableDirective implements OnInit {
   private box: ClientRect;
 
   private vScroll: HTMLElement;
+  private vScrollWrapper: HTMLElement;
 
   private scrollerHeight: number;
 
@@ -35,8 +40,48 @@ export class ScrollableDirective implements OnInit {
 
     this.init();
 
-    if (this.visibleHeight < this.innerHeight) {
-      this.createVerticalScroll();
+    this.createVerticalScroll();
+
+    // this.watcher = window.requestAnimationFrame(this.watch.bind(this));
+
+    if (this.detectSizeChanges) {
+
+      const ignore = new eq.ResizeSensor(this.detectSizeChanges, (x) => {
+
+        this.watchChanges();
+
+      });
+
+    }
+
+  }
+
+  watchChanges(): void {
+
+    if (this.innerHeight !== (this.detectSizeChanges ? this.detectSizeChanges.offsetHeight : this.el.nativeElement.scrollHeight)) {
+
+      // height changed
+
+      // recalculate basic stats
+      this.visibleHeight = this.el.nativeElement.clientHeight;
+      this.innerHeight = this.detectSizeChanges ? this.detectSizeChanges.offsetHeight : this.el.nativeElement.scrollHeight;
+      this.scrollerHeight = Math.ceil(this.visibleHeight * (this.visibleHeight / this.innerHeight));
+      this.box = this.el.nativeElement.getBoundingClientRect();
+
+      if (this.visibleHeight >= this.innerHeight) {
+
+        // remove scroller
+
+        this.removeVerticalScroll();
+
+      } else {
+
+        // reset its values
+
+        this.resetVerticalScroll(this.vToBar(this.el.nativeElement.scrollTop));
+
+      }
+
     }
 
   }
@@ -46,7 +91,7 @@ export class ScrollableDirective implements OnInit {
     this.renderer.setStyle(this.el.nativeElement, 'overflow', 'hidden');
 
     this.visibleHeight = this.el.nativeElement.clientHeight;
-    this.innerHeight = this.el.nativeElement.scrollHeight;
+    this.innerHeight = this.detectSizeChanges ? this.detectSizeChanges.offsetHeight : this.el.nativeElement.scrollHeight;
 
     this.scrollerHeight = Math.ceil(this.visibleHeight * (this.visibleHeight / this.innerHeight));
 
@@ -60,27 +105,35 @@ export class ScrollableDirective implements OnInit {
 
     this.el.nativeElement.addEventListener('mousewheel', (event: WheelEvent) => {
 
-      const scrollTopRaw = this.el.nativeElement.scrollTop + event.deltaY;
-      const scrollTopBounds = Math.ceil(Math.max(0, Math.min(this.innerHeight - this.visibleHeight, scrollTopRaw)));
+      if (this.visibleHeight <= this.innerHeight) {
 
-      const barTopRaw = Math.ceil(scrollTopBounds + this.vToBar(scrollTopBounds));
+        const scrollTopRaw = this.el.nativeElement.scrollTop + event.deltaY;
+        const scrollTopBounds = Math.ceil(Math.max(0, Math.min(this.innerHeight - this.visibleHeight, scrollTopRaw)));
 
-      this.renderer.setStyle(this.vScroll, 'top', barTopRaw + 'px');
+        const barTopRaw = Math.ceil(scrollTopBounds + this.vToBar(scrollTopBounds));
 
-      this.renderer.setProperty(this.el.nativeElement, 'scrollTop', scrollTopBounds);
+        this.renderer.setStyle(this.vScroll, 'top', barTopRaw + 'px');
+
+        this.renderer.setProperty(this.el.nativeElement, 'scrollTop', scrollTopBounds);
+
+      }
 
     });
 
     this.el.nativeElement.addEventListener('DOMMouseScroll', (event: WheelEvent) => {
 
-      const scrollTopRaw = this.el.nativeElement.scrollTop + event.deltaY;
-      const scrollTopBounds = Math.ceil(Math.max(0, Math.min(this.innerHeight - this.visibleHeight, scrollTopRaw)));
+      if (this.visibleHeight <= this.innerHeight) {
 
-      const barTopRaw = Math.ceil(scrollTopBounds + this.vToBar(scrollTopBounds));
+        const scrollTopRaw = this.el.nativeElement.scrollTop + event.deltaY;
+        const scrollTopBounds = Math.ceil(Math.max(0, Math.min(this.innerHeight - this.visibleHeight, scrollTopRaw)));
 
-      this.renderer.setStyle(this.vScroll, 'top', barTopRaw + 'px');
+        const barTopRaw = Math.ceil(scrollTopBounds + this.vToBar(scrollTopBounds));
 
-      this.renderer.setProperty(this.el.nativeElement, 'scrollTop', scrollTopBounds);
+        this.renderer.setStyle(this.vScroll, 'top', barTopRaw + 'px');
+
+        this.renderer.setProperty(this.el.nativeElement, 'scrollTop', scrollTopBounds);
+
+      }
 
     });
 
@@ -92,18 +145,22 @@ export class ScrollableDirective implements OnInit {
     });
     hammer.on('pan', (event) => {
 
-      event.preventDefault();
+      if (this.visibleHeight <= this.innerHeight) {
 
-      const scrollTopRaw = this.el.nativeElement.scrollTop + (Math.abs(event.deltaY) * event.velocityY);
-      const scrollTopBounds = Math.ceil(Math.max(0, Math.min(this.innerHeight - this.visibleHeight, scrollTopRaw)));
+        event.preventDefault();
 
-      const barTopRaw = Math.ceil(scrollTopBounds + this.vToBar(scrollTopBounds));
+        const scrollTopRaw = this.el.nativeElement.scrollTop + (Math.abs(event.deltaY) * event.velocityY);
+        const scrollTopBounds = Math.ceil(Math.max(0, Math.min(this.innerHeight - this.visibleHeight, scrollTopRaw)));
 
-      this.renderer.setStyle(this.vScroll, 'top', barTopRaw + 'px');
+        const barTopRaw = Math.ceil(scrollTopBounds + this.vToBar(scrollTopBounds));
 
-      // this.renderer.setProperty(this.el.nativeElement, 'scrollTo', scrollTopBounds);
+        this.renderer.setStyle(this.vScroll, 'top', barTopRaw + 'px');
 
-      this.el.nativeElement.scrollTo(this.el.nativeElement.scrollTop, scrollTopBounds);
+        // this.renderer.setProperty(this.el.nativeElement, 'scrollTo', scrollTopBounds);
+
+        this.el.nativeElement.scrollTo(this.el.nativeElement.scrollTop, scrollTopBounds);
+
+      }
 
     });
 
@@ -111,7 +168,22 @@ export class ScrollableDirective implements OnInit {
 
   }
 
-  createVerticalScroll(): void {
+  removeVerticalScroll(): void {
+    this.renderer.removeChild(this.el.nativeElement, this.vScrollWrapper);
+  }
+
+  resetVerticalScroll(initialTop: number = 0): void {
+
+    this.renderer.setStyle(this.vScroll, 'height',  this.scrollerHeight + 'px');
+    this.renderer.setStyle(this.vScrollWrapper, 'height', this.innerHeight + 'px');
+
+    this.renderer.setStyle(this.vScroll, 'top', initialTop + 'px');
+
+    this.renderer.appendChild(this.el.nativeElement, this.vScrollWrapper);
+
+  }
+
+  createVerticalScroll(initialTop: number = 0): void {
 
     // bar
 
@@ -126,7 +198,7 @@ export class ScrollableDirective implements OnInit {
     }
 
     this.renderer.setStyle(this.vScroll, 'position', 'absolute');
-    this.renderer.setStyle(this.vScroll, 'top', '0px');
+    this.renderer.setStyle(this.vScroll, 'top', initialTop + 'px');
     this.renderer.setStyle(this.vScroll, this.barPosition, this.barSeparation + 'px');
 
     this.renderer.setStyle(this.vScroll, 'background-color', this.barColor);
@@ -134,27 +206,34 @@ export class ScrollableDirective implements OnInit {
 
     // wrapper
 
-    const scrollerWrapper: HTMLElement = this.renderer.createElement('div');
-    this.renderer.setStyle(scrollerWrapper, 'position', 'absolute');
-    this.renderer.setStyle(scrollerWrapper, 'top', '0px');
-    this.renderer.setStyle(scrollerWrapper, this.barPosition, this.barSeparation + 'px');
-    this.renderer.setStyle(scrollerWrapper, 'width', this.barWidth + 'px');
-    this.renderer.setStyle(scrollerWrapper, 'height', this.innerHeight + 'px');
+    this.vScrollWrapper = this.renderer.createElement('div');
+    this.renderer.setStyle(this.vScrollWrapper, 'position', 'absolute');
+    this.renderer.setStyle(this.vScrollWrapper, 'top', '0px');
+    this.renderer.setStyle(this.vScrollWrapper, this.barPosition, this.barSeparation + 'px');
+    this.renderer.setStyle(this.vScrollWrapper, 'width', this.barWidth + 'px');
+    this.renderer.setStyle(this.vScrollWrapper, 'height', this.innerHeight + 'px');
 
-    this.renderer.appendChild(scrollerWrapper, this.vScroll);
-    this.renderer.appendChild(this.el.nativeElement, scrollerWrapper);
+    this.renderer.appendChild(this.vScrollWrapper, this.vScroll);
 
-    scrollerWrapper.addEventListener('click', (event: MouseEvent) => {
+    if (this.innerHeight > this.visibleHeight) {
+      this.renderer.appendChild(this.el.nativeElement, this.vScrollWrapper);
+    }
 
-      const positionRaw = event.clientY - this.box.top;
+    this.vScrollWrapper.addEventListener('click', (event: MouseEvent) => {
 
-      const positionInBar = Math.max(0, Math.min(this.visibleHeight - this.scrollerHeight, positionRaw));
+      if (this.visibleHeight <= this.innerHeight) {
 
-      const positionInside = this.vToInner(positionInBar);
+        const positionRaw = event.clientY - this.box.top;
 
-      this.renderer.setStyle(this.vScroll, 'top', (positionInside + positionInBar) + 'px');
+        const positionInBar = Math.max(0, Math.min(this.visibleHeight - this.scrollerHeight, positionRaw));
 
-      this.renderer.setProperty(this.el.nativeElement, 'scrollTop', positionInside);
+        const positionInside = this.vToInner(positionInBar);
+
+        this.renderer.setStyle(this.vScroll, 'top', (positionInside + positionInBar) + 'px');
+
+        this.renderer.setProperty(this.el.nativeElement, 'scrollTop', positionInside);
+
+      }
 
     });
 

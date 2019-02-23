@@ -4,5 +4,5 @@
   "lib": {
     "entryFile": "src/public_api.ts"
   },
-  "whitelistedNonPeerDependencies": ["hammerjs"]
+  "whitelistedNonPeerDependencies": ["hammerjs", "css-element-queries"]
 }
