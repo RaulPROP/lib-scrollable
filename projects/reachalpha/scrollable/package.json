@@ -1,0 +1,23 @@
+{
+  "name": "@reachalpha/scrollable",
+  "description": "Simple Angular Directive that creates a customizable scrollbar",
+  "keywords": [
+    "reach",
+    "reachalpha",
+    "angular",
+    "directive",
+    "scroll",
+    "scrollbar",
+    "overflow",
+    "custom"
+  ],
+  "license": "MIT",
+  "version": "1.0.4",
+  "peerDependencies": {
+    "@angular/common": "^7.0.0",
+    "@angular/core": "^7.0.0"
+  },
+  "dependencies": {
+    "hammerjs": "^2.0.8"
+  }
+}
