@@ -16,6 +16,14 @@
     "lib": [
       "es2018",
       "dom"
-    ]
+    ],
+    "paths": {
+      "@reachalpha/scrollable": [
+        "dist/reachalpha/scrollable"
+      ],
+      "@reachalpha/scrollable/*": [
+        "dist/reachalpha/scrollable/*"
+      ]
+    }
   }
 }
