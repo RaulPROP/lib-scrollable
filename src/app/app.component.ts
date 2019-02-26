@@ -6,5 +6,15 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'scroller';
+  public componentArray: number[] = [1, 2, 3, 4, 5, 6];
+
+  constructor() {}
+
+  addRow(): void {
+    this.componentArray.push(1);
+  }
+
+  deleteRow(): void {
+    this.componentArray.pop();
+  }
 }
